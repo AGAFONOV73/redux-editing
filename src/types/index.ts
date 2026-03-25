@@ -1,3 +1,4 @@
+// src/types/index.ts
 export interface Service {
   id: string;
   name: string;
@@ -6,6 +7,11 @@ export interface Service {
 
 export interface ServicesState {
   items: Service[];
+}
+
+// ✅ Добавляем FilterState
+export interface FilterState {
+  searchTerm: string;
 }
 
 export interface FormState {
@@ -20,5 +26,6 @@ export interface FormState {
 
 export interface RootState {
   services: ServicesState;
+  filter: FilterState;  // ✅ Теперь FilterState определен
   form: FormState;
 }

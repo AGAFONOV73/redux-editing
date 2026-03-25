@@ -1,16 +1,39 @@
-import React, { useState } from "react";
-import { useAppDispatch, useAppSelector } from "../hooks/redux";
-import { deleteService } from "../store/slices/servicesSlice";
-import { startEditing, cancelEditing } from "../store/slices/formSlice";
-import "./ServiceList.css";
+// src/components/ServiceList.tsx
+import React, { useState } from 'react';
+import { useAppDispatch, useAppSelector } from '../hooks/redux';
+import { deleteService } from '../store/slices/servicesSlice';
+import { startEditing, cancelEditing } from '../store/slices/formSlice';
+import { selectFilteredServices, selectFilterStats } from '../store/selectors/servicesSelectors';
+import './ServiceList.css';
 
 const ServiceList: React.FC = () => {
   const dispatch = useAppDispatch();
-  const services = useAppSelector((state) => state.services.items);
-  const { editingId } = useAppSelector((state) => state.form);
-  const [selectedServices, setSelectedServices] = useState<Set<string>>(
-    new Set(),
-  );
+  const filteredServices = useAppSelector(selectFilteredServices);
+  const stats = useAppSelector(selectFilterStats);
+  const searchTerm = useAppSelector(state => state.filter.searchTerm);
+  const { editingId } = useAppSelector(state => state.form);
+  const [selectedServices, setSelectedServices] = useState<Set<string>>(new Set());
+
+  // Функция для подсветки найденных символов
+  const highlightText = (text: string, search: string) => {
+    if (!search.trim()) return <span>{text}</span>;
+    
+    const lowerText = text.toLowerCase();
+    const lowerSearch = search.toLowerCase();
+    const index = lowerText.indexOf(lowerSearch);
+    
+    if (index === -1) return <span>{text}</span>;
+    
+    return (
+      <span>
+        {text.substring(0, index)}
+        <mark className="highlight">
+          {text.substring(index, index + search.length)}
+        </mark>
+        {text.substring(index + search.length)}
+      </span>
+    );
+  };
 
   const handleEdit = (service: any) => {
     dispatch(startEditing(service));
@@ -21,7 +44,6 @@ const ServiceList: React.FC = () => {
     if (editingId === id) {
       dispatch(cancelEditing());
     }
-    // Убираем из выбранных при удалении
     const newSelected = new Set(selectedServices);
     newSelected.delete(id);
     setSelectedServices(newSelected);
@@ -38,15 +60,15 @@ const ServiceList: React.FC = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedServices.size === services.length) {
+    if (selectedServices.size === filteredServices.length) {
       setSelectedServices(new Set());
     } else {
-      setSelectedServices(new Set(services.map((s) => s.id)));
+      setSelectedServices(new Set(filteredServices.map(s => s.id)));
     }
   };
 
   const handleDeleteSelected = () => {
-    selectedServices.forEach((id) => {
+    selectedServices.forEach(id => {
       dispatch(deleteService(id));
       if (editingId === id) {
         dispatch(cancelEditing());
@@ -59,40 +81,39 @@ const ServiceList: React.FC = () => {
     <div className="services-list">
       <div className="list-header">
         <h2>Список услуг</h2>
-        <div className="services-count">Всего услуг: {services.length}</div>
+        <div className="services-count">
+          Всего услуг: {stats.total}
+        </div>
       </div>
-
-      {services.length > 0 && (
+      
+      {filteredServices.length > 0 && (
         <div className="list-actions">
           <label className="select-all">
             <input
               type="checkbox"
-              checked={
-                selectedServices.size === services.length && services.length > 0
-              }
+              checked={selectedServices.size === filteredServices.length && filteredServices.length > 0}
               onChange={handleSelectAll}
             />
             Выбрать все
           </label>
           {selectedServices.size > 0 && (
-            <button
-              className="btn-delete-selected"
-              onClick={handleDeleteSelected}
-            >
+            <button className="btn-delete-selected" onClick={handleDeleteSelected}>
               Удалить выбранные ({selectedServices.size})
             </button>
           )}
         </div>
       )}
-
-      {services.length === 0 ? (
-        <div className="empty-state">Нет добавленных услуг</div>
+      
+      {filteredServices.length === 0 ? (
+        <div className="empty-state">
+          {searchTerm ? '🔍 Услуги не найдены' : '📋 Нет добавленных услуг'}
+        </div>
       ) : (
         <div className="services-list-items">
-          {services.map((service) => (
-            <div
-              key={service.id}
-              className={`service-item ${editingId === service.id ? "editing" : ""}`}
+          {filteredServices.map(service => (
+            <div 
+              key={service.id} 
+              className={`service-item ${editingId === service.id ? 'editing' : ''}`}
             >
               <div className="service-checkbox">
                 <input
@@ -102,19 +123,19 @@ const ServiceList: React.FC = () => {
                 />
               </div>
               <div className="service-info">
-                <span className="service-name">{service.name}</span>
-                <span className="service-price">
-                  {service.price.toFixed(0)} ₽
+                <span className="service-name">
+                  {highlightText(service.name, searchTerm)}
                 </span>
+                <span className="service-price">{service.price.toFixed(0)} ₽</span>
               </div>
               <div className="service-actions">
-                <button
+                <button 
                   className="btn-edit"
                   onClick={() => handleEdit(service)}
                 >
                   Редактировать
                 </button>
-                <button
+                <button 
                   className="btn-delete"
                   onClick={() => handleDelete(service.id)}
                 >
